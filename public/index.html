@@ -200,7 +200,7 @@
             formData.append("chatId", btoa(chatId));
 
             const xhr = new XMLHttpRequest();
-            xhr.open("POST", "http://localhost:5000/upload", true);
+            xhr.open("POST", "https://image-to-url-telegram.onrender.com/upload", true);
 
             xhr.upload.onprogress = (event) => {
                 if (event.lengthComputable) {
