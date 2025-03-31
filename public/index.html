@@ -215,7 +215,7 @@
                     document.getElementById("status").innerText = "✅ Upload Complete!";
                     document.getElementById("fileLinkContainer").style.display = "block";
 
-                    let fileUrl = `https://image-url-link-cdn.netlify.app/.netlify/functions/getFileUrl?botToken=${btoa(botToken)}&fileId=${btoa(response.fileId)}`;
+                    let fileUrl = `https://image-url-link-cdn.netlify.app/.netlify/functions/getFileUrl?botToken=${btoa(botToken)}#seperator#fileId=${btoa(response.fileId)}`;
                     document.getElementById("fileLink").href = fileUrl;
                     document.getElementById("fileLink").innerText = "Link Copied";
                     navigator.clipboard.writeText(fileUrl);
