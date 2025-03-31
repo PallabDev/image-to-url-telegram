@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload with Progress</title>
+
+    <!-- Material UI CDN -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+            width: 380px;
+            text-align: center;
+            transition: all 0.3s ease-in-out;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            font-weight: 500;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            transition: 0.3s;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3f51b5;
+            box-shadow: 0 0 5px rgba(63, 81, 181, 0.3);
+        }
+
+        button {
+            background-color: #3f51b5;
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #2c3e9f;
+        }
+
+        .progress-container {
+            width: 100%;
+            margin-top: 15px;
+            background: #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #progressFill {
+            width: 0%;
+            height: 10px;
+            background: #3f51b5;
+            border-radius: 8px;
+            transition: width 0.3s ease-in-out;
+        }
+
+        #fileLink {
+            color: #3f51b5;
+            text-decoration: none;
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        #fileLink:hover {
+            text-decoration: underline;
+        }
+
+        #copyUrlBtn {
+            background-color: #4caf50;
+            margin-top: 8px;
+        }
+
+        #copyUrlBtn:hover {
+            background-color: #388e3c;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" id="authContainer">
+        <h2>Enter Credentials</h2>
+        <input type="text" id="botToken" placeholder="Enter Bot Token" style="width: 100%; margin-bottom: 10px;">
+        <input type="text" id="chatId" placeholder="Enter Chat ID" style="width: 100%; margin-bottom: 10px;">
+        <button id="saveCredentials">Save & Proceed</button>
+    </div>
+
+    <div class="container" id="uploadContainer" style="display: none;">
+        <h2>Upload a Large File</h2>
+        <input type="file" id="fileInput" accept="*/*" style="margin-bottom: 10px;">
+        <br>
+        <button id="uploadBtn">Upload</button>
+        <div class="progress-container">
+            <div id="progressBar" style="height: 10px; background: #ddd; border-radius: 5px; width: 100%;">
+                <div id="progressFill" style="width: 0%; height: 100%; background: #3f51b5;"></div>
+            </div>
+        </div>
+        <p id="status" style="margin-top: 10px; color: #333;"></p>
+        <div id="fileLinkContainer" style="display: none; margin-top: 10px;">
+            <a id="fileLink" href="#" target="_blank"></a>
+            <br>
+            <button id="copyUrlBtn" style="margin-top: 5px;">Copy URL</button>
+        </div>
+    </div>
+
+
+    <!-- CryptoJS for AES Encryption -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+    <script>
+        const SECRET_KEY = "stp123"; // Change this for added security
+
+        function encryptData(data) {
+            return CryptoJS.AES.encrypt(data, SECRET_KEY).toString();
+        }
+
+        function decryptData(data) {
+            if (!data) return null;
+            try {
+                const bytes = CryptoJS.AES.decrypt(data, SECRET_KEY);
+                return bytes.toString(CryptoJS.enc.Utf8);
+            } catch (error) {
+                console.error("Decryption error:", error);
+                return null;
+            }
+        }
+
+        function saveCredentials() {
+            const botToken = document.getElementById("botToken").value;
+            const chatId = document.getElementById("chatId").value;
+            if (!botToken || !chatId) return alert("Both fields are required!");
+
+            sessionStorage.setItem("botToken", encryptData(botToken));
+            sessionStorage.setItem("chatId", encryptData(chatId));
+            alert("Credentials saved securely!");
+            checkAuth();
+        }
+
+        function checkAuth() {
+            const encryptedBotToken = sessionStorage.getItem("botToken");
+            const encryptedChatId = sessionStorage.getItem("chatId");
+
+            if (encryptedBotToken && encryptedChatId) {
+                document.getElementById("authContainer").style.display = "none";
+                document.getElementById("uploadContainer").style.display = "block";
+            }
+        }
+
+        document.getElementById("saveCredentials").addEventListener("click", saveCredentials);
+        checkAuth();
+
+        document.getElementById("uploadBtn").addEventListener("click", async () => {
+            const fileInput = document.getElementById("fileInput");
+            const file = fileInput.files[0];
+            const botToken = decryptData(sessionStorage.getItem("botToken"));
+            const chatId = decryptData(sessionStorage.getItem("chatId"));
+
+            if (!file) return alert("Please select a file!");
+            if (file.size > 40 * 1024 * 1024) return alert("❌ File size exceeds 40MB limit!");
+
+            document.getElementById("status").innerText = "Uploading...";
+            const progressBar = document.getElementById("progressFill");
+            progressBar.style.width = "0%";
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("botToken", btoa(botToken)); // Base64 for added safety
+            formData.append("chatId", btoa(chatId));
+
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "http://localhost:5000/upload", true);
+
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percent = Math.round((event.loaded / event.total) * 100);
+                    progressBar.style.width = percent + "%";
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    document.getElementById("status").innerText = "✅ Upload Complete!";
+                    document.getElementById("fileLinkContainer").style.display = "block";
+
+                    let fileUrl = `https://image-url-link-cdn.netlify.app/.netlify/functions/getFileUrl?botToken=${btoa(botToken)}&fileId=${btoa(response.fileId)}`;
+                    document.getElementById("fileLink").href = fileUrl;
+                    document.getElementById("fileLink").innerText = "Link Copied";
+                    navigator.clipboard.writeText(fileUrl);
+                    document.getElementById("copyUrlBtn").addEventListener("click", () => {
+                        navigator.clipboard.writeText(fileUrl);
+                    });
+                } else {
+                    document.getElementById("status").innerText = "❌ Upload Failed!";
+                }
+            };
+
+            xhr.send(formData);
+        });
+    </script>
+
+</body>
+
+</html>
